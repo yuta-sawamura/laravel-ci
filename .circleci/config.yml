@@ -22,7 +22,6 @@ jobs:
       - restore_cache:
           key: composer-v1-{{ checksum "composer.lock" }}
       - run: composer install -n --prefer-dist
-      - run: cp .env.example.testing .env.testing
       - save_cache:
           key: composer-v1-{{ checksum "composer.lock" }}
           paths:
@@ -50,31 +49,31 @@ jobs:
       - run:
           name: php test
           command: vendor/bin/phpunit
-    deploy:
-      docker:
-        - image: circleci/php:7.3-node-browsers
-      steps:
-        - add_ssh_keys
-        - run:
-            name: deploy
-            command: |
-              ssh -o StrictHostKeyChecking=no -t webapp@${HOST_NAME} "cd laravel-ci && \
-                git pull origin master && \
-                composer install -n --no-dev --prefer-dist && \
-                npm ci && \
-                npm run prod && \
-                php artisan migrate --force && \
-                php artisan config:cache"
 
-  workflows:
-    version: 2
-    build_deploy:
-      jobs:
-        - build
-        - deploy:
-            requires:
-              - build
-            filters:
-              branches:
-                only:
-                  - master
+  deploy:
+    docker:
+      - image: circleci/php:7.3-node-browsers
+    steps:
+      - add_ssh_keys
+      - run:
+          name: deploy
+          command: |
+            ssh -o StrictHostKeyChecking=no -t webapp@${HOST_NAME} "cd laravel-ci && \
+              git pull origin master && \
+              composer install -n --no-dev --prefer-dist && \
+              npm ci && \
+              npm run prod && \
+              php artisan migrate --force && \
+              php artisan config:cache"
+workflows:
+  version: 2
+  build_deploy:
+    jobs:
+      - build
+      - deploy:
+          requires:
+            - build
+          filters:
+            branches:
+              only:
+                - master
